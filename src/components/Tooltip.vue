@@ -63,7 +63,7 @@ export default {
   padding: 0;
   max-width: 20rem;
   min-width: 20rem;
-  margin-left: 0.15rem;
+  margin-left: 1rem;
   background-color: transparent !important;
   opacity: 1;
 }

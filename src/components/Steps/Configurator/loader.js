@@ -1,4 +1,3 @@
-export { default as Workflow } from './Workflow'
 export { default as Expressions } from './Expressions'
 export { default as Function } from './Function'
 export { default as Iterator } from './Iterator'

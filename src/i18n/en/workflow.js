@@ -1,5 +1,19 @@
 /* eslint-disable no-template-curly-in-string */
 export default {
+  navigation: {
+    help: {
+      forum: 'Help',
+      documentation: 'Documentation',
+      feedback: 'Send feedback',
+    },
+    userSettings: {
+      loggedInAs: 'Logged in as {{user}}',
+      profile: 'Profile',
+      changePassword: 'Change password',
+      logout: 'Logout',
+    },
+  },
+
   permission: {
     saveChanges: 'Save changes',
     resetBack: 'Reset back to "{{current}}"',

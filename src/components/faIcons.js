@@ -9,9 +9,12 @@ import {
   faCog,
   faChevronLeft,
   faChevronDown,
+  faChevronRight,
   faExclamationTriangle,
   faSearchPlus,
   faSearchMinus,
+  faUserCog,
+  faGripHorizontal,
 } from '@fortawesome/free-solid-svg-icons'
 
 import {
@@ -32,8 +35,11 @@ library.add(
   faCog,
   faChevronLeft,
   faChevronDown,
+  faChevronRight,
   faExclamationTriangle,
   faQuestionCircle,
   faSearchPlus,
   faSearchMinus,
+  faUserCog,
+  faGripHorizontal,
 )

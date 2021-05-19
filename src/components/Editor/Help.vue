@@ -1,5 +1,12 @@
 <template>
-  <div>
+  <b-modal
+    id="help"
+    title="Help"
+    size="lg"
+    scrollable
+    hide-footer
+    body-class="p-0"
+  >
     <b-form-group
       label-class="sticky-top bg-white pb-0"
       class="p-2 mb-0"
@@ -47,7 +54,7 @@
         thead-class="d-none"
       />
     </b-form-group>
-  </div>
+  </b-modal>
 </template>
 
 <script>

@@ -2,57 +2,64 @@
   <div
     id="editor"
     ref="editor"
-    class="h-100 d-flex"
+    class="d-flex w-100 h-100"
     @keydown="keybinds"
   >
-    <b-card
-      no-body
-      no-footer
-      class="h-100 border-right shadow-lg rounded-0"
-    >
-      <b-card-header
-        class="d-flex flex-column justify-content-between align-items-center sticky-top h4 p-2"
-        header-bg-variant="white"
-        header-text-variant="white"
-        header-border-variant="primary"
+    <portal to="topbar-title">
+      <div
+        class="d-flex align-items-center"
       >
-        <b-img
-          :src="getLogo"
-          class="mb-4"
-        />
-        <router-link
-          :to="{name: 'workflow.list'}"
+        <b-button
+          v-b-modal.workflow
+          variant="link"
+          class="p-0 mr-3"
         >
           <font-awesome-icon
-            :icon="['fas', 'home']"
+            :icon="['fas', 'cog']"
+            class="h4 mb-0"
           />
-        </router-link>
-      </b-card-header>
-      <b-card-body
-        class="d-flex flex-column p-1"
-      >
-        <div
-          id="toolbar"
-          ref="toolbar"
-          class="d-flex flex-column align-items-center mt-1 overflow-auto"
-        />
-
-        <div
-          class="d-flex flex-grow-1 align-items-end justify-content-center p-3"
+        </b-button>
+        <h2
+          class="mb-0 text-truncate"
         >
-          <b-button
-            v-b-modal.help
-            variant="link"
-            class="p-0"
-          >
-            <font-awesome-icon
-              :icon="['far', 'question-circle']"
-              class="h4 mb-0"
-            />
-          </b-button>
-        </div>
-      </b-card-body>
-    </b-card>
+          <b>{{ workflow.meta.name || workflow.handle }}</b>
+        </h2>
+      </div>
+    </portal>
+
+    <portal to="sidebar-body-collapsed">
+      <div
+        id="toolbar"
+        ref="toolbar"
+        class="d-flex flex-column align-items-center overflow-auto"
+      />
+    </portal>
+
+    <portal to="sidebar-body-expanded">
+      <!-- Caveat with portals, do not delete -->
+      <div
+        id="toolbar"
+        ref="toolbar"
+        class="d-none"
+      />
+    </portal>
+
+    <portal to="sidebar-footer-collapsed">
+      <div
+        class="d-flex flex-grow-1 align-items-end justify-content-center"
+      >
+        <b-button
+          v-b-modal.help
+          variant="link"
+          class="p-0"
+        >
+          <font-awesome-icon
+            :icon="['far', 'question-circle']"
+            class="h4 mb-0"
+          />
+        </b-button>
+      </div>
+    </portal>
 
     <div
       ref="tooltips"
@@ -66,42 +73,21 @@
       body-class="p-0"
     >
       <b-card-body
-        class="p-0"
+        class="position-relative p-0"
       >
         <div
           v-if="workflow.meta"
           class="position-absolute pl-3 pt-2 w-100 mw-100"
           style="z-index: 1;"
         >
-          <div
-            class="d-flex align-items-center"
-            :class="{ 'mb-2': workflow.meta.description }"
-          >
-            <b-button
-              v-b-modal.workflow
-              variant="link"
-              class="p-0 mr-3"
-            >
-              <font-awesome-icon
-                :icon="['fas', 'cog']"
-                class="h4 mb-0"
-              />
-            </b-button>
-            <h1
-              class="mb-0 text-truncate"
-            >
-              <b>{{ workflow.meta.name || workflow.handle }}</b>
-            </h1>
-          </div>
-
           <p
             v-if="workflow.meta.description"
             class="mb-0 text-truncate"
             style="white-space: pre-line; max-width: 50%; max-height: 48px;"
-            :class="{ 'mb-2': getRunAs }"
           >
             {{ workflow.meta.description }}
           </p>
+
           <p
             v-if="getRunAs"
             class="mb-0 text-truncate"
@@ -137,46 +123,8 @@
         </div>
 
         <div
-          class="bg-white position-absolute m-2 zoom border border-secondary"
-          style="z-index: 1; width: fit-content;"
-        >
-          <div
-            class="d-flex align-items-baseline p-2"
-          >
-            {{ getZoomPercent }}
-            <b-button
-              variant="link"
-              class="ml-4 p-0"
-              @click="zoom(false)"
-            >
-              <font-awesome-icon
-                :icon="['fas', 'search-minus']"
-              />
-            </b-button>
-            <b-button
-              variant="link"
-              class="ml-1 p-0"
-              @click="zoom()"
-            >
-              <font-awesome-icon
-                :icon="['fas', 'search-plus']"
-                class="pointer"
-                @click="zoom()"
-              />
-            </b-button>
-            <b-button
-              variant="link"
-              class="ml-2 p-0 text-decoration-none"
-              @click="resetZoom()"
-            >
-              Reset
-            </b-button>
-          </div>
-        </div>
-
-        <div
-          class="d-flex flex-column flex-shrink position-absolute fixed-bottom m-2"
-          style="z-index: 1; width: fit-content;"
+          :class="`d-flex position-absolute fixed-bottom m-2 ${changeDetected ? 'justify-content-between' : 'justify-content-end'}`"
+          style="z-index: 1;"
         >
           <b-button
             v-if="changeDetected"
@@ -187,242 +135,72 @@
           >
             Changes detected {{ `${canUpdateWorkflow ? 'Click here to save.' : ''}` }}
           </b-button>
+
+          <zoom
+            :zoom-level="zoomLevel"
+            @zoom-in="zoom()"
+            @zoom-out="zoom(false)"
+            @reset="resetZoom()"
+          />
         </div>
 
         <div
           id="graph"
           ref="graph"
-          class="h-100 p-0"
+          class="h-100"
         />
       </b-card-body>
     </b-card>
 
-    <!--
-      no-enforce-focus flag doesn't set focus to sidebar when it is opened.
-      Bad for Accesability, since keyboard only users can't use sidebar.
-     -->
-    <b-sidebar
-      v-model="sidebar.show"
-      shadow
-      right
-      lazy
-      no-enforce-focus
-      width="500px"
-      header-class="bg-white border-bottom border-light p-2"
-      body-class="bg-white"
-      footer-class="bg-white border-top border-light p-1"
+    <sidebar
+      :show="sidebar.show"
+      :item="sidebar.item"
+      @delete="sidebarDelete()"
     >
-      <template
-        #header
-      >
-        <div
-          v-if="sidebar.item"
-          class="d-flex align-items-center w-100 h5 mb-0 p-2"
-        >
-          <b-img
-            :src="getSidebarItemIcon"
-          />
-          <h4
-            class="text-primary font-weight-bold ml-2 mb-0"
-          >
-            <b>{{ getSidebarItemType }}</b>
-          </h4>
-
-          <div
-            class="ml-auto"
-          >
-            ID: <var>{{ getSelectedItem.node.id }}</var>
-          </div>
-        </div>
-      </template>
-
-      <configurator
+      <step-configurator
         v-if="sidebar.item"
         :item.sync="sidebar.item"
         :edges.sync="edges"
         :out-edges="sidebar.outEdges"
         @update-value="setValue($event)"
       />
+    </sidebar>
 
-      <template
-        #footer
-      >
-        <div
-          class="d-flex m-2"
-        >
-          <c-input-confirm
-            size="md"
-            size-confirm="md"
-            variant="danger"
-            :borderless="false"
-            @confirmed="sidebarDelete()"
-          >
-            Delete
-          </c-input-confirm>
-        </div>
-      </template>
-    </b-sidebar>
+    <workflow-configurator
+      :workflow="workflow"
+      @import="importJSON"
+      @save="saveWorkflow()"
+      @delete="$emit('delete')"
+    />
 
-    <b-modal
-      id="workflow"
-      title="Workflow configuration"
-      size="lg"
-    >
-      <template #modal-title>
-        Workflow Configuration
+    <issues
+      :show.sync="issuesModal.show"
+      :issues="issuesModal.issues"
+    />
 
-        <c-permissions-button
-          v-if="workflow.canGrant"
-          :title="workflow.meta.name || workflow.handle"
-          :target="workflow.meta.name || workflow.handle"
-          :resource="`automation:workflow:${workflow.workflowID}`"
-          link
-          class="ml-2"
-        />
-      </template>
+    <dry-run
+      :event-scope="dryRun.eventScope"
+      @test="testWorkflow"
+    />
 
-      <div
-        class="d-flex mb-3"
-      >
-        <import
-          :disabled="importProcessing"
-          @import="importJSON"
-        />
-
-        <export
-          v-if="workflow.workflowID && workflow.workflowID !== '0'"
-          :workflows="[workflow.workflowID]"
-          :file-name="workflow.handle"
-          class="ml-1"
-        />
-      </div>
-      <workflow-configurator
-        v-if="workflow.workflowID"
-        :workflow="workflow"
-        @delete="$emit('delete')"
-      />
-
-      <template #modal-footer>
-        <div
-          class="d-flex w-100"
-        >
-          <c-input-confirm
-            v-if="workflow.canDeleteWorkflow"
-            size="md"
-            size-confirm="md"
-            :borderless="false"
-            @confirmed="$emit('delete')"
-          >
-            Delete
-          </c-input-confirm>
-
-          <b-button
-            variant="primary"
-            class="ml-auto"
-            @click="saveWorkflow()"
-          >
-            Save
-          </b-button>
-        </div>
-      </template>
-    </b-modal>
-
-    <b-modal
-      id="help"
-      title="Help"
-      size="lg"
-      scrollable
-      hide-footer
-      body-class="p-0"
-    >
-      <help />
-    </b-modal>
-
-    <b-modal
-      id="issues"
-      v-model="issuesModal.show"
-      title="Step issues"
-      hide-footer
-    >
-      <div
-        v-for="(issue, index) in issuesModal.issues"
-        :key="index"
-      >
-        <p>
-          <code>{{ issue[0].toUpperCase() + issue.slice(1).toLowerCase() }}</code>
-        </p>
-      </div>
-    </b-modal>
-
-    <b-modal
-      id="dry-run"
-      v-model="dryRun.show"
-      size="lg"
-      title="Initial scope"
-      scrollable
-      :body-class="dryRun.lookup ? '' : 'p-1'"
-      :ok-only="dryRun.lookup"
-      :ok-title="`${dryRun.lookup ? 'Load and Configure' : 'Run Workflow'}`"
-      cancel-title="Back"
-      ok-variant="success"
-      @cancel.prevent="dryRun.lookup = true"
-      @ok="dryRunOk"
-    >
-      <div
-        v-if="dryRun.lookup"
-      >
-        <small>
-          The initial scope gets injected into the workflow at execution. To load avaliable variables, input the related IDs/Handles below<br>
-          If you do not wish to load any variables, click "Configure" to modify the initial scope before running workflow<br>
-          Variables that can't be loaded will be auto initialized as empty
-          <br><br>
-          WARNING: If prompts are used in the workflow, make sure that the related webapp is also opened. Otherwise workflow will timeout
-        </small>
-        <div
-          v-for="(p, index) in Object.values(dryRun.initialScope)"
-          :key="index"
-          class="mt-4"
-        >
-          <b-form-group
-            v-if="p.lookup"
-            :label="p.label"
-            :description="p.description"
-          >
-            <b-form-input
-              v-model="p.value"
-            />
-          </b-form-group>
-        </div>
-      </div>
-      <div
-        v-else
-        class="h-100"
-      >
-        <vue-json-editor
-          :value="dryRun.input"
-          :options="{ name: 'Initial Scope' }"
-          class="h-100"
-          @input="onDryRunEdit"
-        />
-      </div>
-    </b-modal>
+    <help />
   </div>
 </template>
 
 <script>
 import mxgraph from 'mxgraph'
 import Vue from 'vue'
-import { encodeGraph } from '../lib/codec'
-import { getStyleFromKind, getKindFromStyle } from '../lib/style'
-import { encodeInput } from '../lib/dry-run'
-import toolbarConfig from '../lib/toolbar'
-import Configurator from '../components/Configurator'
-import Tooltip from '../components/Tooltip.vue'
-import WorkflowConfigurator from '../components/Configurator/Workflow'
-import Help from '../components/Help'
-import VueJsonEditor from 'v-jsoneditor'
-import Import from '../components/Import'
-import Export from '../components/Export'
+import { encodeGraph } from '../lib/editor/codec'
+import { getStyleFromKind, getKindFromStyle } from '../lib/editor/style'
+import toolbarConfig from '../lib/editor/toolbar'
+import StepConfigurator from './Steps/Configurator'
+import Tooltip from './Tooltip'
+import Zoom from './Editor/Zoom'
+import Sidebar from './Editor/Sidebar'
+import DryRun from './Editor/DryRun'
+import Issues from './Editor/Issues'
+import WorkflowConfigurator from './Editor/WorkflowConfigurator'
+import Help from './Editor/Help'
 
 const {
   mxClient,
@@ -462,13 +240,17 @@ export default {
   name: 'WorkflowEditor',
 
   components: {
-    Configurator,
+    StepConfigurator,
     WorkflowConfigurator,
     Help,
-    VueJsonEditor,
-    Import,
-    Export,
+    DryRun,
+    Zoom,
+    Sidebar,
+    Issues,
   },
+
+  mixins: [
+  ],
 
   props: {
     workflowObject: {
@@ -516,15 +298,13 @@ export default {
       toolbar: undefined,
 
       edgeConnected: false,
-      // edgeLayout: undefined,
 
       rendering: false,
 
       sidebar: {
-        item: undefined,
-        itemType: undefined,
-        outEdges: 0,
         show: false,
+        item: undefined,
+        outEdges: 0,
       },
 
       issuesModal: {
@@ -533,16 +313,9 @@ export default {
       },
 
       dryRun: {
-        show: false,
-        processing: false,
-        lookup: false,
         cellID: undefined,
-        initialScope: {},
-        input: {},
-        inputEdited: {},
+        eventScope: [],
       },
-
-      importProcessing: false,
 
       zoomLevel: 1,
     }
@@ -553,32 +326,8 @@ export default {
       return `${process.env.BASE_URL}favicon.ico`
     },
 
-    getSidebarItemType () {
-      const { itemType } = this.sidebar
-      if (itemType) {
-        if (itemType === 'edge') {
-          return 'Connector'
-        }
-        return itemType.charAt(0).toUpperCase() + itemType.slice(1)
-      }
-      return itemType
-    },
-
-    getSidebarItemIcon () {
-      const { item } = this.sidebar
-
-      if (item && item.config) {
-        return getStyleFromKind(item.config).icon
-      }
-      return undefined
-    },
-
     getSelectedItem () {
       return this.sidebar.item ? this.sidebar.item : undefined
-    },
-
-    getZoomPercent () {
-      return `${Math.floor(this.zoomLevel * 100).toFixed(0)}%`
     },
 
     canUpdateWorkflow () {
@@ -633,33 +382,28 @@ export default {
     },
   },
 
-  mounted () {
+  async mounted () {
+    // Portal caveat
+    await this.$nextTick()
+    await this.$nextTick()
+
     try {
       if (!mxClient.isBrowserSupported()) {
         throw new Error(mxUtils.error('Browser is not supported!', 200, false))
       }
-
-      mxEvent.disableContextMenu(this.$refs.graph)
-      this.graph = new mxGraph(this.$refs.graph, null, mxConstants.DIALECT_STRICTHTML)
-      this.keyHandler = new mxKeyHandler(this.graph)
 
       this.setup()
 
       this.initToolbar()
       this.initUndoManager()
       this.initClipboard()
+      this.initKeyhandler()
+      this.initEventhandler()
+      this.initConnectionHandler()
 
-      this.keys()
-      this.events()
-      this.cellOverlay()
+      this.defaultStyle()
 
-      this.styling()
-      this.connectionHandler()
-
-      this.$root.$on('trigger-updated', ({ mxObjectId }) => {
-        this.redrawLabel(mxObjectId)
-      })
-
+      // Initial render
       this.render(this.workflow, true)
 
       // Open workflow configurator if workflow is new
@@ -669,7 +413,7 @@ export default {
 
       this.initialized = true
     } catch (e) {
-      console.error(e)
+      this.defaultErrorHandler('Failed to initialize Worfklow Editor')(e)
     }
   },
 
@@ -681,16 +425,6 @@ export default {
       this.graph.removeCells()
     },
 
-    sidebarClose () {
-      this.sidebar.show = false
-      setTimeout(() => {
-        const mxObjectId = this.sidebar.item.node.mxObjectId
-        this.sidebar.item = undefined
-        this.sidebar.itemType = undefined
-        this.redrawLabel(mxObjectId)
-      }, 300)
-    },
-
     sidebarDelete () {
       if (this.getSelectedItem) {
         this.graph.removeCells([this.getSelectedItem.node])
@@ -698,12 +432,20 @@ export default {
       }
     },
 
-    sidebarReopen (item, itemType) {
+    sidebarClose () {
+      this.sidebar.show = false
+      setTimeout(() => {
+        const mxObjectId = this.sidebar.item.node.mxObjectId
+        this.sidebar.item = undefined
+        this.redrawLabel(mxObjectId)
+      }, 300)
+    },
+
+    sidebarReopen (item) {
       // If not open, just open sidebar
       if (!this.sidebar.show) {
         this.sidebar.outEdges = (item.node.edges || []).length
         this.sidebar.item = item
-        this.sidebar.itemType = itemType
         this.sidebar.show = true
         this.redrawLabel(item.node.mxObjectId)
       } else {
@@ -717,7 +459,6 @@ export default {
         this.sidebar.outEdges = (item.node.edges || []).length
         const oldMxObjectId = ((this.getSelectedItem || {}).node || {}).mxObjectId
         this.sidebar.item = item
-        this.sidebar.itemType = itemType
         this.redrawLabel(oldMxObjectId)
         this.redrawLabel(item.node.mxObjectId)
         setTimeout(() => {
@@ -727,29 +468,43 @@ export default {
     },
 
     setup () {
-      this.graph.zoomFactor = 1.2
+      this.graph = new mxGraph(this.$refs.graph, null, mxConstants.DIALECT_STRICTHTML)
 
-      // Sets a background image and restricts child movement to its bounds
-      this.graph.setBackgroundImage(new mxImage(`${process.env.BASE_URL}icons/grid.svg`, 8192, 8192))
+      this.graph.zoomFactor = 1.2
       this.graph.maximumGraphBounds = new mxRectangle(0, 0, 8192, 8192)
       this.graph.gridSize = 8
+      this.graph.edgeLabelsMovable = false
 
+      // Sets a background image and restricts child movement to its bounds
+      this.graph.setBackgroundImage(new mxImage(`${process.env.BASE_URL}/icons/grid.svg`, 8192, 8192))
       this.graph.setPanning(true)
       this.graph.setConnectable(true)
       this.graph.setAllowDanglingEdges(false)
       this.graph.setTooltips(true)
-      /* eslint-disable no-new */
-      new mxRubberband(this.graph) // Enables multiple selection
-      this.graph.edgeLabelsMovable = false
 
       // Prevent showing tooltips on regular cells, just show overlay
       this.graph.getTooltipForCell = () => {}
+
+      /* eslint-disable no-new */
+      new mxRubberband(this.graph) // Enables multiple selection
+
+      mxGraph.prototype.minFitScale = 1
+      mxGraph.prototype.maxFitScale = 1
+      mxGraph.prototype.expandedImage = undefined
 
       // Enables guides
       mxGraphHandler.prototype.guidesEnabled = true
 
       // Prevent cloning with ctrl + drag
       mxGraphHandler.prototype.cloneEnabled = false
+
+      mxCellOverlay.prototype.defaultOverlap = 1.2
+
+      mxEdgeHandler.prototype.snapToTerminals = true
+
+      // Disables mxGraph console window
+      mxLog.setVisible = () => {}
+      mxEvent.disableContextMenu(this.$refs.graph)
 
       // Alt disables guides
       mxGraphHandler.prototype.useGuidesForEvent = (evt) => {
@@ -761,10 +516,9 @@ export default {
         return mxGraphHandlerIsValidDropTarget.apply(this, arguments) && !target.edge
       }
 
-      mxEdgeHandler.prototype.snapToTerminals = true
-
-      mxGraph.prototype.minFitScale = 1
-      mxGraph.prototype.maxFitScale = 1
+      this.$root.$on('trigger-updated', ({ mxObjectId }) => {
+        this.redrawLabel(mxObjectId)
+      })
 
       this.graph.isHtmlLabel = cell => {
         return true
@@ -772,6 +526,24 @@ export default {
 
       this.graph.isWrapping = cell => {
         return true
+      }
+
+      this.graph.isCellEditable = () => {
+        return false
+      }
+
+      if (mxClient.IS_QUIRKS) {
+        document.body.style.overflow = 'hidden'
+        /* eslint-disable no-new */
+        new mxDivResizer(this.graph.container)
+      }
+
+      if (mxClient.IS_NS) {
+        mxEvent.addListener(this.graph.container, 'mousedown', () => {
+          if (!this.graph.isEditing()) {
+            this.graph.container.setAttribute('tabindex', '-1')
+          }
+        })
       }
 
       this.graph.getLabel = cell => {
@@ -826,29 +598,6 @@ export default {
         }
 
         return label
-      }
-
-      this.graph.isCellEditable = () => {
-        return false
-      }
-
-      // Disables mxGraph console window
-      mxLog.setVisible = () => {}
-
-      mxGraph.prototype.expandedImage = undefined
-
-      if (mxClient.IS_QUIRKS) {
-        document.body.style.overflow = 'hidden'
-        /* eslint-disable no-new */
-        new mxDivResizer(this.graph.container)
-      }
-
-      if (mxClient.IS_NS) {
-        mxEvent.addListener(this.graph.container, 'mousedown', () => {
-          if (!this.graph.isEditing()) {
-            this.graph.container.setAttribute('tabindex', '-1')
-          }
-        })
       }
     },
 
@@ -1120,7 +869,9 @@ export default {
     },
 
     // Only works when canvas is focused
-    keys () {
+    initKeyhandler () {
+      this.keyHandler = new mxKeyHandler(this.graph)
+
       // Register control and meta key if Mac
       this.keyHandler.getFunction = (evt) => {
         if (evt != null) {
@@ -1228,7 +979,7 @@ export default {
       })
     },
 
-    events () {
+    initEventhandler () {
       // Edge connect event
       this.graph.connectionHandler.addListener(mxEvent.CONNECT, (sender, evt) => {
         const node = evt.getProperty('cell')
@@ -1343,8 +1094,7 @@ export default {
             // If clicked on Cog icon
             if (event.target.id === 'openSidebar') {
               const item = cell.edge ? this.edges[cell.id] : this.vertices[cell.id]
-              const itemType = cell.edge ? 'edge' : item.config.kind
-              this.sidebarReopen(item, itemType)
+              this.sidebarReopen(item)
             } else if (event.target.id === 'openIssues') {
               this.issuesModal.issues = this.issues[cell.id]
               this.issuesModal.show = true
@@ -1372,8 +1122,7 @@ export default {
           const isVisual = ((this.vertices[cell.id] || {}).config || {}).kind === 'visual'
           if (cell.edge || isVisual) {
             const item = cell.edge ? this.edges[cell.id] : this.vertices[cell.id]
-            const itemType = cell.edge ? 'edge' : item.config.kind
-            this.sidebarReopen(item, itemType)
+            this.sidebarReopen(item)
           }
         }
 
@@ -1402,7 +1151,7 @@ export default {
       })
     },
 
-    styling () {
+    defaultStyle () {
       // General
       mxConstants.VERTEX_SELECTION_COLOR = '#A7D0E3'
       mxConstants.VERTEX_SELECTION_STROKEWIDTH = 2
@@ -1461,57 +1210,9 @@ export default {
       style[mxConstants.STYLE_STROKEWIDTH] = 0
       style[mxConstants.STYLE_STROKEWIDTH] = 2
       this.graph.getStylesheet().putCellStyle('swimlane', style)
-
-      // // Symbol (custom shape) styling
-      // style = mxUtils.clone(this.graph.getStylesheet().getDefaultVertexStyle())
-      // style[mxConstants.STYLE_SHAPE] = mxConstants.SHAPE_IMAGE
-      // style[mxConstants.STYLE_PERIMETER] = mxPerimeter.RectanglePerimeter
-      // style[mxConstants.STYLE_FONTSIZE] = 13
-      // style[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER
-      // style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_TOP
-      // style[mxConstants.STYLE_VERTICAL_LABEL_POSITION] = mxConstants.ALIGN_BOTTOM
-      // this.graph.getStylesheet().putCellStyle('symbol', style)
-
-      // // Function
-      // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('symbol'))
-      // style[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER
-      // style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_MIDDLE
-      // style[mxConstants.STYLE_VERTICAL_LABEL_POSITION] = mxConstants.ALIGN_MIDDLE
-      // this.graph.getStylesheet().putCellStyle('function', style)
-
-      // // Iterator
-      // // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('symbol'))
-      // // this.graph.getStylesheet().putCellStyle('iterator', style)
-
-      // // Event
-      // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('symbol'))
-      // style[mxConstants.STYLE_PERIMETER] = mxPerimeter.EllipsePerimeter
-      // style[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_CENTER
-      // style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_CENTER
-      // style[mxConstants.STYLE_VERTICAL_LABEL_POSITION] = mxConstants.ALIGN_MIDDLE
-      // this.graph.getStylesheet().putCellStyle('event', style)
-
-      // // Error handler
-      // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('event'))
-      // this.graph.getStylesheet().putCellStyle('error-handler', style)
-
-      // // Gateway
-      // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('symbol'))
-      // style[mxConstants.STYLE_PERIMETER] = mxPerimeter.RhombusPerimeter
-      // style[mxConstants.STYLE_VERTICAL_LABEL_POSITION] = mxConstants.ALIGN_TOP
-      // style[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_BOTTOM
-      // this.graph.getStylesheet().putCellStyle('gateway', style)
-
-      // // Expression
-      // style = mxUtils.clone(this.graph.getStylesheet().getCellStyle('symbol'))
-      // this.graph.getStylesheet().putCellStyle('expressions', style)
     },
 
-    cellOverlay () {
-      mxCellOverlay.prototype.defaultOverlap = 1.2
-    },
-
-    connectionHandler () {
+    initConnectionHandler () {
       mxConstraintHandler.prototype.intersects = function (icon, point, source, existingEdge) {
         return (!source || existingEdge) || mxUtils.intersects(icon.bounds, point)
       }
@@ -1612,7 +1313,7 @@ export default {
       }
 
       // Image for fixed point
-      mxConstraintHandler.prototype.pointImage = new mxImage(`${process.env.BASE_URL}icons/connection-point.svg`, 8, 8)
+      mxConstraintHandler.prototype.pointImage = new mxImage(`${process.env.BASE_URL}/icons/connection-point.svg`, 8, 8)
 
       // On hover outline for fixed point
       mxConstraintHandler.prototype.createHighlightShape = function () {
@@ -1748,94 +1449,21 @@ export default {
         return
       }
 
-      const lookupableTypes = [
-        'record',
-        'oldRecord',
-        'module',
-        'oldModule',
-        'page',
-        'oldPage',
-        'namespace',
-        'oldNamespace',
-        'user',
-        'oldUser',
-        'role',
-        'oldRole',
-        'application',
-        'oldApplication',
-      ]
-
       // Assume trigger is valid since workflow is saved and has no issues
       const { resourceType, eventType } = this.vertices[this.dryRun.cellID].triggers
+
       await this.$AutomationAPI.eventTypesList()
         .then(({ set }) => {
-          const et = (set.find(et => resourceType === et.resourceType && eventType === et.eventType) || {}).properties
-          if (et) {
-            // Flag to check if lookup should be opened, or JSON editor
-            let lookup = false
-            if (et.length) {
-              this.dryRun.initialScope = et.reduce((initialScope, p) => {
-                let label = `${p.name}${lookupableTypes.includes(p.name) ? ' (ID)' : ''}`
-                if (p.type === 'ComposeNamespace' || p.type === 'ComposeModule') {
-                  label = `${p.name} (Handle)`
-                }
-
-                let description = ''
-                if (p.type === 'ComposeRecord') {
-                  description = 'Namespace and Module required'
-                } else if (p.type === 'ComposeModule' || p.name === 'page' || p.name === 'oldPage') {
-                  description = 'Namespace required'
-                }
-
-                initialScope[p.name] = ({
-                  label,
-                  value: (this.dryRun.initialScope[p.name] || {}).value,
-                  lookup: lookupableTypes.includes(p.name),
-                  description,
-                })
-
-                lookup = lookup ? true : lookupableTypes.includes(p.name)
-                return initialScope
-              }, {})
-
-              // Set initial values for unlookable types
-              encodeInput(this.dryRun.initialScope, this.$ComposeAPI, this.$SystemAPI)
-                .then(input => {
-                  this.dryRun.input = input
-                  this.dryRun.lookup = lookup
-                  this.dryRun.show = true
-                })
-                .catch(this.defaultErrorHandler('Failed to load initial scope'))
-            } else {
-              // If no constraints, just run
-              this.dryRun.initialScope = {}
-              this.testWorkflow()
-            }
+          // Get event scope
+          const { properties } = set.find(et => resourceType === et.resourceType && eventType === et.eventType) || {}
+          if (properties) {
+            // Watcher in dryRun is triggered when event scope is loaded
+            this.dryRun.eventScope = properties
           } else {
             this.raiseWarningAlert('Event type not found', 'Test failed')
           }
         })
         .catch(this.defaultErrorHandler('Failed to fetch event types'))
-    },
-
-    async dryRunOk (e) {
-      if (this.dryRun.lookup) {
-        e.preventDefault()
-        // Lookup based on provided ids
-        encodeInput(this.dryRun.initialScope, this.$ComposeAPI, this.$SystemAPI)
-          .then(input => {
-            this.dryRun.input = input
-            this.dryRun.inputEdited = input
-            this.dryRun.lookup = false
-          })
-          .catch(this.defaultErrorHandler('Failed to load initial scope'))
-      } else {
-        this.testWorkflow(this.dryRun.inputEdited)
-      }
-    },
-
-    onDryRunEdit (e) {
-      this.dryRun.inputEdited = e
     },
 
     async testWorkflow (input = {}) {
@@ -2086,10 +1714,6 @@ export default {
       }
     },
 
-    getJsonModel () {
-      return encodeGraph(this.graph.getModel(), this.vertices, this.edges)
-    },
-
     importJSON (workflows = []) {
       this.importProcessing = true
 
@@ -2113,6 +1737,10 @@ export default {
       this.$root.$emit('change-detected')
     },
 
+    getJsonModel () {
+      return encodeGraph(this.graph.getModel(), this.vertices, this.edges)
+    },
+
     saveWorkflow () {
       // Just emit, let parent component take care of permission checks
       this.$emit('save', { ...this.workflow, ...this.getJsonModel() })
@@ -2124,11 +1752,6 @@ export default {
 <style scoped lang="scss">
 #graph {
   outline: none;
-}
-
-.zoom {
-  right: 0;
-  bottom: 0;
 }
 </style>
 

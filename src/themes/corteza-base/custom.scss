@@ -81,6 +81,10 @@ th {
   }
 }
 
+.icon-logo {
+  background-image: url($icon-logo);
+}
+
 .loader {
   display: flex;
   align-items: center;

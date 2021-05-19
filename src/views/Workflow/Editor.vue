@@ -1,29 +1,63 @@
 <template>
-  <workflow-editor
-    v-if="!processing"
-    :workflow-object="workflow"
-    :workflow-triggers="triggers"
-    :change-detected="changeDetected"
-    :can-create="canCreate"
-    @save="saveWorkflow"
-    @delete="deleteWorkflow"
-  />
+  <div
+    class="d-flex h-100 editor"
+  >
+    <workflow-editor
+      v-if="!processing"
+      :workflow-object="workflow"
+      :workflow-triggers="triggers"
+      :change-detected="changeDetected"
+      :can-create="canCreate"
+      @save="saveWorkflow"
+      @delete="deleteWorkflow"
+    />
+
+    <portal to="sidebar-header-expanded">
+      <vue-select
+        key="workflowID"
+        label="handle"
+        class="workflow-selector sticky-top bg-white my-2"
+        :clearable="false"
+        :options="filteredWorkflows"
+        :value="currentWorkflow"
+        @option:selected="workflowSelected"
+      >
+        <template v-slot:option="wf">
+          <span class="text-truncate">
+            {{ wf.meta.name || wf.handle }}
+          </span>
+        </template>
+        <template #list-footer>
+          <router-link
+            :to="{ name: 'workflow.create' }"
+            class="d-block mt-3 ml-3 mb-1 font-weight-bold"
+          >
+            + Add new
+          </router-link>
+        </template>
+      </vue-select>
+    </portal>
+  </div>
 </template>
 
 <script>
 import WorkflowEditor from '../../components/WorkflowEditor'
+import { VueSelect } from 'vue-select'
 import { automation } from '@cortezaproject/corteza-js'
 
 export default {
   name: 'Editor',
 
   components: {
+    VueSelect,
     WorkflowEditor,
   },
 
   data () {
     return {
       canCreate: false,
+
+      workflows: [],
 
       processing: true,
       workflow: {},
@@ -38,6 +72,15 @@ export default {
       return this.$route.params.workflowID || (this.workflow.workflowID !== '0' ? this.workflow.workflowID : undefined)
     },
 
+    filteredWorkflows () {
+      return this.workflows.filter(({ workflowID }) => workflowID !== this.workflowID)
+    },
+
+    currentWorkflow () {
+      const { workflowID, handle } = this.workflow
+      return { workflowID, handle }
+    },
+
     userID () {
       if (this.$auth.user) {
         return this.$auth.user.userID
@@ -46,7 +89,23 @@ export default {
     },
   },
 
+  watch: {
+    workflowID: {
+      async handler () {
+        this.processing = true
+
+        await this.fetchTriggers()
+        await this.fetchWorkflow()
+
+        this.changeDetected = false
+
+        this.processing = false
+      },
+    },
+  },
+
   async mounted () {
+    this.$root.$emit('set-expand-onhover', false)
     window.onbeforeunload = null
 
     this.$root.$on('change-detected', () => {
@@ -60,6 +119,7 @@ export default {
     })
 
     this.fetchPermissions()
+    this.fetchWorkflowList()
 
     if (this.workflowID) {
       await this.fetchTriggers()
@@ -94,6 +154,7 @@ export default {
 
   methods: {
     async fetchWorkflow () {
+      this.workflow = {}
       return this.$AutomationAPI.workflowRead({ workflowID: this.workflowID })
         .then(wf => {
           this.workflow = wf
@@ -101,7 +162,16 @@ export default {
         .catch(this.defaultErrorHandler('Failed to fetch workflow'))
     },
 
+    async fetchWorkflowList () {
+      return this.$AutomationAPI.workflowList({ disabled: 1, sort: 'handle' })
+        .then(({ set = [] }) => {
+          this.workflows = set
+        })
+        .catch(this.defaultErrorHandler('Failed to fetch workflows'))
+    },
+
     async fetchTriggers (workflowID = this.workflowID) {
+      this.triggers = []
       return this.$AutomationAPI.triggerList({ workflowID, disabled: 1 })
         .then(({ set = [] }) => {
           this.triggers = set
@@ -115,6 +185,14 @@ export default {
           this.canCreate = rules.find(({ resource, operation }) => resource === 'automation' && operation === 'workflow.create').allow
         })
         .catch(this.defaultErrorHandler('Failed to fetch automation permissions'))
+    },
+
+    workflowSelected ({ workflowID }) {
+      if (this.changeDetected && !window.confirm('You have unsaved changes, are you sure you want to switch workflows?')) {
+
+      } else {
+        this.$router.push({ name: 'workflow.edit', params: { workflowID } })
+      }
     },
 
     async saveWorkflow (wf) {
@@ -132,13 +210,13 @@ export default {
             throw new Error('Not allowed to create workflow')
           }
 
-          wf = await this.$AutomationAPI.workflowCreate(this.workflow)
+          wf = await this.$AutomationAPI.workflowCreate(wf)
         } else {
           if (!this.workflow.canUpdateWorkflow) {
             throw new Error('Not allowed to update workflow')
           }
 
-          wf = await this.$AutomationAPI.workflowUpdate(this.workflow)
+          wf = await this.$AutomationAPI.workflowUpdate(wf)
         }
 
         // Delete triggers of steps that were deleted
@@ -202,3 +280,22 @@ export default {
   },
 }
 </script>
+
+<style lang="scss" scoped>
+.editor {
+  width: calc(100% - 77px);
+}
+
+.workflow-selector {
+  font-size: 1rem;
+  max-height: 40px;
+}
+</style>
+
+<style lang="scss">
+.v-select .vs__selected-options {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+}
+</style>

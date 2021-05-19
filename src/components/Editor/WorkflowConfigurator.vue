@@ -1,5 +1,38 @@
 <template>
-  <div>
+  <b-modal
+    id="workflow"
+    title="Workflow configuration"
+    size="lg"
+  >
+    <template #modal-title>
+      Workflow Configuration
+
+      <c-permissions-button
+        v-if="workflow.canGrant"
+        :title="workflow.meta.name || workflow.handle"
+        :target="workflow.meta.name || workflow.handle"
+        :resource="`automation:workflow:${workflow.workflowID}`"
+        link
+        class="ml-2"
+      />
+    </template>
+
+    <div
+      class="d-flex mb-3"
+    >
+      <import
+        :disabled="importProcessing"
+        @import="$emit('import', $event)"
+      />
+
+      <export
+        v-if="workflow.workflowID && workflow.workflowID !== '0'"
+        :workflows="[workflow.workflowID]"
+        :file-name="workflow.handle"
+        class="ml-1"
+      />
+    </div>
+
     <b-form-group
       label="Label"
     >
@@ -50,15 +83,43 @@
         Enabled
       </b-form-checkbox>
     </b-form-group>
-  </div>
+
+    <template #modal-footer>
+      <div
+        class="d-flex w-100"
+      >
+        <c-input-confirm
+          v-if="workflow.canDeleteWorkflow"
+          size="md"
+          size-confirm="md"
+          :borderless="false"
+          @confirmed="$emit('delete')"
+        >
+          Delete
+        </c-input-confirm>
+
+        <b-button
+          variant="primary"
+          class="ml-auto"
+          @click="$emit('save')"
+        >
+          Save
+        </b-button>
+      </div>
+    </template>
+  </b-modal>
 </template>
 
 <script>
+import Import from '../Import'
+import Export from '../Export'
 import { debounce } from 'lodash'
 import { VueSelect } from 'vue-select'
 
 export default {
   components: {
+    Import,
+    Export,
     VueSelect,
   },
 
@@ -71,6 +132,8 @@ export default {
 
   data () {
     return {
+      importProcessing: false,
+
       user: {
         options: [],
         value: undefined,

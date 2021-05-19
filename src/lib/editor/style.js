@@ -8,6 +8,41 @@ export function getStyleFromKind ({ kind = '', ref = '' }) {
   return kindToStyle[kindRef] || {}
 }
 
+// When adding & or copy/pasting a new cell, this is used to determine the kind & ref
+export function getKindFromStyle (vertex) {
+  const { style } = vertex
+  if (!style) {
+    return {}
+  }
+
+  const kind = style.split(';')[0]
+
+  if (kind.includes('gateway')) {
+    if (gatewayKinds[kind]) {
+      return gatewayKinds[kind]
+    } else {
+      // Determine if fork or join
+      let inEdgeCount = 0
+      let outEdgeCount = 0
+      const edges = vertex.edges || []
+
+      edges.forEach(({ source, target }) => {
+        if (source.id === vertex.id) {
+          outEdgeCount++
+        } else if (target.id === vertex.id) {
+          inEdgeCount++
+        }
+      })
+
+      return { kind: 'gateway', ref: (inEdgeCount > outEdgeCount ? 'join' : 'fork') }
+    }
+  } else if (kind === 'swimlane') {
+    return { kind: 'visual', ref: 'swimlane' }
+  } else {
+    return { kind }
+  }
+}
+
 // Reason for process.env.BASE_URL is a tehnicality with mxGraph and the way it uses images & icons
 // The style property tells mxGraph what internal style to use for displaying the specific step
 const kindToStyle = {
@@ -146,41 +181,6 @@ const kindToStyle = {
     tooltip: 'Logs current workflow scope into server logs. If workflow debug is enabled',
     style: 'debug',
   },
-}
-
-// When adding & or copy/pasting a new cell, this is used to determine the kind & ref
-export function getKindFromStyle (vertex) {
-  const { style } = vertex
-  if (!style) {
-    return {}
-  }
-
-  const kind = style.split(';')[0]
-
-  if (kind.includes('gateway')) {
-    if (gatewayKinds[kind]) {
-      return gatewayKinds[kind]
-    } else {
-      // Determine if fork or join
-      let inEdgeCount = 0
-      let outEdgeCount = 0
-      const edges = vertex.edges || []
-
-      edges.forEach(({ source, target }) => {
-        if (source.id === vertex.id) {
-          outEdgeCount++
-        } else if (target.id === vertex.id) {
-          inEdgeCount++
-        }
-      })
-
-      return { kind: 'gateway', ref: (inEdgeCount > outEdgeCount ? 'join' : 'fork') }
-    }
-  } else if (kind === 'swimlane') {
-    return { kind: 'visual', ref: 'swimlane' }
-  } else {
-    return { kind }
-  }
 }
 
 const gatewayKinds = {

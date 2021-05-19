@@ -1,5 +1,9 @@
 <template>
   <div class="h-100 py-3 flex-grow-1 overflow-auto">
+    <portal to="topbar-title">
+      List of Workflows
+    </portal>
+
     <b-container fluid>
       <b-row no-gutters>
         <b-col
@@ -14,10 +18,6 @@
               header-bg-variant="white"
               class="py-3"
             >
-              <h1 class="mb-3">
-                List of Workflows
-              </h1>
-
               <b-row
                 class="align-items-center justify-content-between"
                 no-gutters
@@ -77,6 +77,7 @@
                 tbody-tr-class="pointer"
                 responsive
                 hover
+                class="mb-0"
                 @row-clicked="handleRowClicked"
               >
                 <template v-slot:cell(handle)="{ item: w }">
@@ -193,6 +194,8 @@ export default {
   },
 
   created () {
+    this.$root.$emit('set-expand-onhover', true)
+
     this.fetchPermissions()
     this.fetchWorkflows()
   },
